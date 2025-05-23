@@ -1,0 +1,193 @@
+mqtt:
+  host: 192.168.1.15  # Replace with your MQTT broker IP
+  port: 1883
+  topic_prefix: frigate
+  client_id: frigate
+  user: Iot
+  password: yourpassword
+
+detectors:
+  tensorrt:
+    type: tensorrt
+    device: 0 #This is the default, select the first GPU
+
+model:
+  path: /config/model_cache/tensorrt/yolov7-320.trt
+  input_tensor: nchw
+  input_pixel_format: rgb
+  width: 320
+  height: 320
+
+tls:
+  enabled: true
+
+logger:
+  default: info
+  logs:
+    frigate.event: debug
+
+birdseye:
+  enabled: true
+  restream: false
+  width: 1280
+  height: 720
+  quality: 8
+  mode: objects
+  inactivity_threshold: 30
+  layout:
+    scaling_factor: 2.0
+    max_cameras: 1
+
+ffmpeg:
+  global_args: -hide_banner -loglevel warning -threads 2
+  hwaccel_args: preset-nvidia
+  input_args: preset-rtsp-generic
+  output_args:
+    detect: -threads 2 -f rawvideo -pix_fmt yuv420p
+    record: preset-record-generic
+  retry_interval: 10
+
+
+
+detect:
+  width: 1280
+  height: 720
+  fps: 5
+  enabled: true
+  min_initialized: 2
+  max_disappeared: 25
+  stationary:
+    interval: 50
+    threshold: 50
+    max_frames:
+      default: 3000
+      objects:
+        person: 1000
+  annotation_offset: 0
+
+record:
+  enabled: true
+  expire_interval: 60
+  sync_recordings: true
+  retain:
+    days: 7
+    mode: all
+  export:
+    timelapse_args: -vf setpts=0.04*PTS -r 30
+  preview:
+    quality: medium
+  alerts:
+    retain:
+      days: 7
+    pre_capture: 5
+    post_capture: 5
+  detections:
+    retain:
+      days: 7
+    pre_capture: 5
+    post_capture: 5
+snapshots:
+  enabled: true
+  clean_copy: true
+  timestamp: true
+  bounding_box: true
+  crop: false
+  height: 175
+  retain:
+    default: 7
+    objects:
+      person: 15
+  quality: 100
+
+objects:
+  track:
+    - person
+
+  filters:
+    person:
+      min_area: 5000
+      max_area: 100000
+      min_ratio: 0.5
+      max_ratio: 2.0
+      min_score: 0.5
+      threshold: 0.7
+
+review:
+  alerts:
+    labels:
+      - car
+      - person
+
+  detections:
+    labels:
+      - car
+      - person
+
+motion:
+  enabled: true
+  threshold: 30
+  lightning_threshold: 0.8
+  contour_area: 10
+  frame_alpha: 0.01
+  frame_height: 100
+
+  improve_contrast: true
+  mqtt_off_delay: 30
+
+
+
+go2rtc:
+  streams:
+    # Netra:
+    #   - rtsp://192.168.1.98:8554/netrahd
+    YourCamera:
+      - rtsp://username:password@ipaddress:port/stream1
+      # example for my tplink tapo   - rtsp://admin:password@192.168.1.45:554/stream1
+    YourCamera_sub::
+      - rtsp://username:password@ipaddress:port/stream2
+      # example for my tplink tapo   - rtsp://admin:password@192.168.1.45:554/stream2
+    
+
+timestamp_style:
+  position: tl
+  format: '%m/%d/%Y %H:%M:%S'
+  color:
+    red: 255
+    green: 255
+    blue: 255
+  thickness: 2
+
+cameras:
+  
+  LivingRoomCam:
+    ffmpeg:
+      output_args:
+        record: preset-record-generic-audio-copy
+      inputs:
+        - path: rtsp://localhost:8554/YourCamera # YourCamera is the name of the camera stream provided in the go2rtc section
+          input_args: preset-rtsp-restream
+          roles:
+            - record
+        - path: rtsp://localhost:8554/YourCamera_sub # YourCamera_sub is the name of the camera stream provided in the go2rtc section
+          input_args: preset-rtsp-restream
+          roles:
+            - detect
+
+
+# Below are optional settings
+
+ui:
+  time_format: browser
+  date_style: short
+  time_style: medium
+  strftime_fmt: '%Y/%m/%d %H:%M'
+
+
+camera_groups:
+ 
+  Your_Cameras:
+    order: 6
+    icon: LuHome
+    cameras:
+      - LivingRoomCam
+version: 0.15-1

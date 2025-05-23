@@ -1,0 +1,29 @@
+version: "3.9"
+services:
+  frigate:
+    container_name: frigate
+    restart: unless-stopped
+    image: ghcr.io/blakeblackshear/frigate:stable-tensorrt  # Use the TensorRT variant
+    runtime: nvidia  # Use NVIDIA runtime for GPU support
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all  # Use all available GPUs
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility,video  # Allow compute, video, and utility capabilities
+      - YOLO_MODELS=yolov7-320,yolov7-640
+      - USE_FP16=false
+    volumes:
+      - ./config:/config/
+      - /dev/dri:/dev/dri
+      - /ssdtank/frigate:/media/frigate # This is my ssd storage where I want to save the frigate recordings
+      - /mnt/videos:/media/frigate  # Video storage on HDD
+      - /opt/frigate/logs:/var/log/frigate  # Persistent logs
+      - type: tmpfs
+        target: /tmp/cache  # Temporary files in RAM
+        tmpfs:
+          size: 6g  # Allocate 15 GB of RAM for tmpfs
+    shm_size: 12g  # Shared memory size
+    ports:
+      - "5000:5000"
+      - "1935:1935"
+      - "8554:8554"
+      - "8555:8555/tcp"
+      - "8555:8555/udp"
